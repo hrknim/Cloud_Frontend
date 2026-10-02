@@ -1,0 +1,127 @@
+import "dotenv/config";
+import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
+import { unlink } from "node:fs/promises";
+import path from "node:path";
+import test from "node:test";
+import pg from "pg";
+import { createServer } from "node:http";
+import { loadCloud } from "./load-cloud.mjs";
+
+test("Sharing: multiple recipients, inherited access, editor limits, and immediate revocation", async () => {
+  const originalAuthUrl = process.env.AUTH_URL;
+  const users = Array.from({ length: 5 }, (_, i) => ({ id: randomUUID(), handle: `share-test-${randomUUID()}`, displayName: `User ${i}` }));
+  const ids = [];
+  const auth = createServer((req, res) => {
+    res.setHeader("Content-Type", "application/json");
+    const index = Number(req.headers.cookie?.match(/^session_id=sharing-(\d)$/)?.[1]);
+    const caller = users[index];
+    if (!caller) { res.statusCode = 401; res.end(JSON.stringify({ result: null })); return; }
+    const url = new URL(req.url, "http://localhost");
+    if (url.pathname === "/api/user/handle") {
+      assert.equal(req.method, "POST");
+      let body = "";
+      req.on("data", chunk => { body += chunk; });
+      req.on("end", () => {
+        const found = users.find(user => user.handle === JSON.parse(body).handle);
+        res.statusCode = found ? 200 : 404; res.end(JSON.stringify({ result: found || null }));
+      });
+    } else res.end(JSON.stringify({ result: caller }));
+  });
+  await new Promise(resolve => auth.listen(0, "127.0.0.1", resolve));
+  process.env.AUTH_URL = `http://127.0.0.1:${auth.address().port}`;
+  const modules = await loadCloud(); const cloud = modules.cloud;
+  const db = new pg.Client({ connectionString: process.env.DATABASE_URL }); await db.connect();
+  async function dispatch(url, method = "GET", body, user = 0, headers = {}) {
+    const req = new Request(`http://localhost:3001${url}`, { method, headers: { Cookie: `session_id=sharing-${user}`, ...(body && !(body instanceof FormData) ? { "Content-Type": "application/json" } : {}), ...headers }, ...(body ? { body: body instanceof FormData ? body : JSON.stringify(body) } : {}) });
+    const parts = new URL(req.url).pathname.split("/").filter(Boolean); const kind = parts[1] === "folders" ? "FOLDER" : "FILE";
+    return cloud.cloudResponse(() => {
+      if (parts[1] === "shared") return cloud.listSharedItems(req);
+      if (parts[1] === "shares") return method === "GET" ? cloud.listItemShares(req) : method === "POST" ? cloud.addItemShare(req) : cloud.changeItemShare(req);
+      if (parts[3] === "content") return cloud.downloadCloudFile(req, parts[2]);
+      if (parts[2]) return method === "GET" ? cloud.getCloudItem(req, parts[2], kind) : method === "PATCH" ? cloud.updateCloudItem(req, parts[2], kind) : cloud.deleteCloudItem(req, parts[2], kind);
+      return method === "GET" ? cloud.listCloudItems(req, kind) : kind === "FOLDER" ? cloud.createCloudFolder(req) : cloud.uploadCloudFile(req);
+    });
+  }
+  async function request(url, method, body, user) {
+    const response = await dispatch(url, method, body, user); return { status: response.status, body: response.status === 204 ? null : await response.json() };
+  }
+  async function createFolder(name, parentId, user = 0) {
+    const result = await request("/api/folders", "POST", { name, parentId }, user); assert.equal(result.status, 201, JSON.stringify(result.body)); ids.push(result.body.item.id); return result.body.item;
+  }
+  async function upload(parentId, user = 0) {
+    const form = new FormData(); form.set("file", new File(["shared content"], `${randomUUID()}.txt`, { type: "text/plain" })); form.set("parentId", parentId);
+    const result = await request("/api/files", "POST", form, user); assert.equal(result.status, 201, JSON.stringify(result.body)); ids.push(result.body.item.id); return result.body.item;
+  }
+  try {
+    const root = await createFolder("shared root"); const nested = await createFolder("nested", root.id); const file = await upload(nested.id);
+    const outside = await createFolder("private outside");
+    for (const [user, role] of [[1, "VIEWER"], [2, "EDITOR"], [3, "VIEWER"]]) {
+      const shared = await request("/api/shares", "POST", { itemId: root.id, handle: `@${users[user].handle}`, role });
+      assert.equal(shared.status, 201, JSON.stringify(shared.body)); assert.equal(shared.body.share.userId, users[user].id);
+    }
+    assert.equal((await request(`/api/shares?itemId=${root.id}`)).body.shares.length, 3);
+    const inheritedShares = await request(`/api/shares?itemId=${nested.id}`);
+    assert.equal(inheritedShares.body.shares.length, 0);
+    assert.equal(inheritedShares.body.inherited.length, 3);
+    assert.ok(inheritedShares.body.inherited.every(share => share.sourceId === root.id));
+    const ownFiles = await request("/api/files?scope=all");
+    assert.equal(ownFiles.body.items.find(item => item.id === file.id).shared, true, "Owners can see inherited sharing on child files");
+    assert.equal((await request("/api/shares", "POST", { itemId: root.id, handle: users[1].handle })).status, 409);
+    assert.equal((await request("/api/shares", "POST", { itemId: root.id, handle: users[0].handle })).status, 400);
+    assert.equal((await request("/api/shares", "POST", { itemId: root.id, handle: "nonexistent" })).status, 404);
+    assert.equal((await request("/api/shares", "POST", { itemId: root.id, handle: users[4].handle, role: "OWNER" })).status, 400);
+    assert.equal((await dispatch("/api/shares", "POST", { itemId: root.id, handle: users[4].handle }, 0, { Origin: "https://foreign.example" })).status, 403);
+
+    const shared = await request("/api/shared?limit=100", "GET", undefined, 1);
+    assert.equal(shared.body.total, 3); assert.ok(!shared.body.items.some(item => item.id === outside.id));
+    assert.equal(shared.body.items.find(item => item.id === root.id).sharedRoot, true);
+    assert.equal(shared.body.items.find(item => item.id === file.id).sharedRoot, false);
+    assert.equal((await request(`/api/files/${file.id}`, "GET", undefined, 1)).body.item.permission, "VIEWER");
+    assert.equal(await (await dispatch(`/api/files/${file.id}/content`, "GET", undefined, 1)).text(), "shared content");
+    assert.equal((await request(`/api/files/${file.id}`, "GET", undefined, 4)).status, 404);
+    assert.equal((await request(`/api/files/${file.id}`, "PATCH", { name: "denied" }, 1)).status, 403);
+    assert.equal((await request("/api/folders", "POST", { name: "denied", parentId: root.id }, 1)).status, 403);
+    const deniedUpload = new FormData(); deniedUpload.set("file", new File(["denied"], "denied.txt")); deniedUpload.set("parentId", root.id);
+    assert.equal((await request("/api/files", "POST", deniedUpload, 1)).status, 403);
+    assert.equal((await request(`/api/files/${file.id}`, "PATCH", { name: "edited.txt" }, 2)).status, 200);
+    const editorFolder = await createFolder("editor added", nested.id, 2); const editorFile = await upload(editorFolder.id, 2);
+    assert.equal((await db.query('SELECT "ownerId" FROM "cloud_item" WHERE "id"=$1', [editorFile.id])).rows[0].ownerId, users[0].id);
+    assert.equal((await request(`/api/files/${file.id}`, "PATCH", { parentId: outside.id }, 2)).status, 403);
+    assert.equal((await request(`/api/files/${file.id}`, "PATCH", { starred: true }, 2)).status, 403);
+    assert.equal((await request(`/api/files/${file.id}`, "DELETE", undefined, 2)).status, 404);
+    for (const method of ["GET", "POST", "PATCH", "DELETE"]) {
+      assert.equal((await request(`/api/shares?itemId=${root.id}`, method, method === "GET" ? undefined : { itemId: root.id, userId: users[1].id, handle: users[4].handle, role: "EDITOR" }, 2)).status, 404);
+    }
+    assert.equal((await request("/api/files?scope=all", "GET", undefined, 1)).body.total, 0, "Shared items do not become owned items");
+    assert.equal((await request("/api/shared", "GET", undefined, 4)).body.total, 0);
+    const paged = await request("/api/shared?limit=2&offset=2", "GET", undefined, 1);
+    assert.equal(paged.body.total, 5); assert.equal(paged.body.items.length, 2);
+    assert.equal((await request("/api/shares", "POST", { itemId: file.id, handle: users[2].handle, role: "VIEWER" })).status, 201);
+    assert.equal((await request(`/api/files/${file.id}`, "GET", undefined, 2)).body.item.permission, "EDITOR", "An inherited editor grant is stronger than a direct viewer grant");
+    assert.equal((await request("/api/shares", "PATCH", { itemId: root.id, userId: users[2].id, role: "VIEWER" })).status, 204);
+    assert.equal((await request(`/api/files/${file.id}`, "GET", undefined, 2)).body.item.permission, "VIEWER");
+    assert.equal((await request("/api/shares", "DELETE", { itemId: file.id, userId: users[2].id })).status, 204);
+    assert.equal((await request(`/api/files/${file.id}`, "GET", undefined, 2)).status, 200, "Removing a direct grant does not remove inherited access");
+    assert.equal((await request(`/api/files/${file.id}`, "PATCH", { name: "denied again" }, 2)).status, 403);
+    assert.equal((await request("/api/shares", "DELETE", { itemId: root.id, userId: users[3].id })).status, 204);
+    assert.equal((await request(`/api/files/${file.id}`, "GET", undefined, 3)).status, 404);
+    assert.equal((await request("/api/shared", "GET", undefined, 3)).body.total, 0);
+
+    assert.equal((await request(`/api/files/${file.id}`, "PATCH", { parentId: outside.id })).status, 200);
+    assert.equal((await request(`/api/files/${file.id}`, "GET", undefined, 1)).status, 404, "Moving outside a shared folder removes inherited access");
+    assert.equal((await request("/api/shares", "POST", { itemId: file.id, handle: users[1].handle, role: "VIEWER" })).status, 201);
+    assert.equal((await request(`/api/files/${file.id}`, "GET", undefined, 1)).status, 200);
+    assert.equal((await request(`/api/files/${file.id}`, "DELETE")).status, 204);
+    assert.equal((await request(`/api/files/${file.id}`, "GET", undefined, 1)).status, 404);
+    assert.equal((await request(`/api/files/${file.id}?permanent=true`, "DELETE")).status, 204);
+    assert.equal((await db.query('SELECT "id" FROM "cloud_share" WHERE "itemId"=$1', [file.id])).rowCount, 0);
+  } finally {
+    const rows = await db.query('SELECT "storageKey" FROM "cloud_item" WHERE "id"=ANY($1::text[]) AND "ownerId"=ANY($2::text[])', [ids, users.map(user => user.id)]);
+    await db.query('UPDATE "cloud_item" SET "parentId"=NULL WHERE "id"=ANY($1::text[]) AND "ownerId"=ANY($2::text[])', [ids, users.map(user => user.id)]);
+    await db.query('DELETE FROM "cloud_item" WHERE "id"=ANY($1::text[]) AND "ownerId"=ANY($2::text[])', [ids, users.map(user => user.id)]);
+    for (const row of rows.rows) if (row.storageKey) await unlink(path.join(process.cwd(), ".cloud-storage", row.storageKey)).catch(error => { if (error.code !== "ENOENT") throw error; });
+    await db.end(); await modules.db.prismaSetting.$disconnect(); await modules.db.pool.end(); await new Promise(resolve => auth.close(resolve));
+    if (originalAuthUrl === undefined) delete process.env.AUTH_URL; else process.env.AUTH_URL = originalAuthUrl;
+  }
+});
