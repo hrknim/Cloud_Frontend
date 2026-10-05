@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
+import type { ReactNode } from "react";
 
-export default function PageList({badge, title = '', user, date, type, memo, action}: {badge: string, title?: string, user: string, date: Date, type: string, memo: any, action: any}) {
+export default function PageList({badge, title = '', user, date, type, memo, action}: {badge: string, title?: string, user: string, date: Date, type: string, memo: ReactNode, action: ReactNode}) {
   return (
     <li
       key={`l-${date}`}

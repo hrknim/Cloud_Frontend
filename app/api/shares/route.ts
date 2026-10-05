@@ -1,4 +1,4 @@
-import { addItemShare, changeItemShare, cloudResponse, listItemShares } from "@/lib/cloud";
+import { addItemShare, changeItemShare, cloudResponse, listItemShares } from "@/lib/server/cloud";
 export const runtime = "nodejs";
 export const GET = (request: Request) => cloudResponse(() => listItemShares(request));
 export const POST = (request: Request) => cloudResponse(() => addItemShare(request));

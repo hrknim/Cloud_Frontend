@@ -1,0 +1,7 @@
+.content { position: relative; flex: 1; min-height: 0; overflow: auto; margin: 20px auto; width: min(1100px, calc(100% - 40px)); background: #fff; color: #263246; border-radius: 6px; }
+.text { margin: 0; min-height: 100%; padding: 24px; line-height: 1.7; tab-size: 4; font-family: var(--font-geist-mono), Consolas, monospace; white-space: pre; }
+.wrap { white-space: pre-wrap; overflow-wrap: anywhere; }
+.status { padding: 0 20px 14px; text-align: center; color: #bdc1c6; font-size: 12px; }
+.text:focus-visible { outline: 2px solid #3478ec; outline-offset: -2px; }
+:global(.dark) .content { background: #202124; color: #e8eaed; }
+@media (max-width: 640px) { .content { width: calc(100% - 16px); margin: 8px auto; } .text { padding: 16px; } }

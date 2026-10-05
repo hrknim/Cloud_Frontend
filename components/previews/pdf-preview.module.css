@@ -1,0 +1,8 @@
+.area { position: relative; flex: 1; min-height: 0; overflow: auto; }
+.page { display: flex; align-items: center; justify-content: center; width: max-content; min-width: 100%; min-height: 100%; padding: 24px; box-sizing: border-box; }
+.page canvas { display: block; flex-shrink: 0; max-width: none; background: white; box-shadow: 0 3px 20px #0005; }
+.pageForm { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+.pageForm input { width: 58px; padding: 5px; border: 1px solid #ffffff40; border-radius: 4px; background: #202124; color: white; text-align: center; }
+.pageForm input:focus-visible { outline: 2px solid #a8c7fa; }
+.controls { flex-wrap: wrap; gap: 4px; }
+@media (max-width: 640px) { .controls button { width: 32px; height: 32px; } }

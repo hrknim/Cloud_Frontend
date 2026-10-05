@@ -1,0 +1,27 @@
+.inspector { display: flex; gap: 14px; padding: 10px 20px; background: #292b30; font-size: 13px; max-height: 110px; overflow: auto; flex-shrink: 0; }
+.inspector strong { flex-shrink: 0; }
+.inspector span { white-space: pre-wrap; overflow-wrap: anywhere; }
+.area { position: relative; flex: 1; min-height: 0; overflow: auto; background: #fff; color: #263246; }
+.grid { border-collapse: separate; border-spacing: 0; min-width: 100%; text-align: left; }
+.grid th, .grid td { border-right: 1px solid #e1e5eb; border-bottom: 1px solid #e1e5eb; }
+.grid th { position: sticky; background: #eef1f5; text-align: center; color: #617086; font-size: 12px; font-weight: 500; padding: 8px; }
+.grid thead th { top: 0; z-index: 2; }
+.grid tbody th { left: 0; z-index: 1; min-width: 48px; }
+.grid .corner { left: 0; z-index: 3; }
+.grid td { padding: 0; vertical-align: top; min-width: 120px; }
+.grid td button { display: block; min-width: 100%; max-width: 480px; min-height: 34px; padding: 7px 10px; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.grid .numeric button { text-align: right; }
+.grid td button:hover { background: #edf4ff; }
+.grid td button:focus-visible, .grid td .selected { outline: 2px solid #3478ec; outline-offset: -2px; }
+.wrap td button { white-space: pre-wrap; overflow-wrap: anywhere; }
+.tabs { display: flex; gap: 4px; padding: 8px 12px; overflow: auto; background: #202124; flex-shrink: 0; }
+.tabs button { padding: 8px 14px; border: 0; border-radius: 6px; background: transparent; color: #bdc1c6; white-space: nowrap; cursor: pointer; }
+.tabs button[aria-pressed="true"] { color: #a8c7fa; background: #34445b; }
+.tabs button:disabled { opacity: .5; }
+.footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 16px; font-size: 12px; flex-shrink: 0; }
+.footer > div { display: flex; align-items: center; gap: 8px; }
+:global(.dark) .area { background: #202124; color: #e8eaed; }
+:global(.dark) .grid th { background: #30343c; color: #bdc1c6; }
+:global(.dark) .grid th, :global(.dark) .grid td { border-color: #3c4043; }
+:global(.dark) .grid td button:hover { background: #34445b; }
+@media (max-width: 640px) { .footer { flex-wrap: wrap; } .inspector { padding: 8px 12px; } }

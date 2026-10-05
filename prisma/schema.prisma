@@ -97,10 +97,9 @@ model cloud_share {
   itemId      String
   item        cloud_item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
   userId      String
-  email       String
-  handle      String
-  displayName String
-  role        CloudShareRole @default(VIEWER)
+  // Null means personal preference only, never an access grant.
+  role        CloudShareRole? @default(VIEWER)
+  starred     Boolean        @default(false)
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
@@ -108,24 +107,50 @@ model cloud_share {
   @@index([userId, itemId])
 }
 
-// ownerId is the verified auth server user ID; no local user table is required.
+// Only UUIDs and storage accounting are kept locally, never auth profiles.
+model cloud_storage {
+  userId      String   @id
+  usedBytes   BigInt   @default(0)
+  limitBytes  BigInt   @default(10737418240)
+  updatedAt   DateTime @updatedAt
+}
+
+enum CloudLinkAccess {
+  RESTRICTED
+  PUBLIC
+}
+
+model cloud_link {
+  itemId    String          @id
+  item      cloud_item      @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  token     String          @unique
+  access    CloudLinkAccess @default(RESTRICTED)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+}
+
+// ownerId controls tree access; storageOwnerId identifies the original uploader.
 model cloud_item {
   id          String        @id @default(uuid())
   ownerId     String
+  storageOwnerId String?
   kind        CloudItemKind
   name        String        @db.VarChar(255)
   parentId    String?
   parent      cloud_item?   @relation("CloudTree", fields: [parentId], references: [id], onDelete: Restrict)
   children    cloud_item[]  @relation("CloudTree")
   shares      cloud_share[]
+  link        cloud_link?
   mimeType    String?
   size        BigInt        @default(0)
   storageKey  String?       @unique
   starred     Boolean       @default(false)
   deletedAt   DateTime?
+  trashBatchId String?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
   @@index([ownerId, parentId, deletedAt])
   @@index([ownerId, kind, deletedAt])
+  @@index([storageOwnerId, kind])
 }

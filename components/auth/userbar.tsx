@@ -1,19 +1,20 @@
 "use client"
 
 import Link from "next/link"
-import { useState, useEffect } from "react"
+import Image from "next/image"
+import { useEffect } from "react"
+import { useUserSession } from "./use-user-session";
+import { userSession } from "@/lib/user-session";
 import { usePathname, useRouter } from "next/navigation";
 
 import {
   Popover,
   PopoverContent,
-  PopoverDescription,
-  PopoverHeader,
-  PopoverTitle,
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { Separator } from "@/components/ui/separator";
-import { LogIn, UserPlus, LogOut, User, History, HelpCircle, Settings } from "lucide-react";
+import { LogOut, User, History } from "lucide-react";
+import type { ut as translateUser } from "@/lib/global";
 
 interface Items {
   href: string; 
@@ -22,17 +23,8 @@ interface Items {
 }
 
 interface Props {
-  ut: any;
+  ut: ReturnType<typeof translateUser>;
   authUrl: string;
-}
-
-interface AuthUser {
-  id: string
-  handle: string
-  displayName: string
-  email: string
-  avatarUrl?: string
-  role: string
 }
 
 function ActionItem({ href, icon, label }: Items) {
@@ -45,26 +37,9 @@ function ActionItem({ href, icon, label }: Items) {
 }
 
 export default function Userbar({ ut, authUrl }: Props) {
-  const [session, setUser] = useState<AuthUser | null>(null)
+  const session = useUserSession();
   const pathname = usePathname();
   const router = useRouter();
-
-  const fetchUser = async () => {
-    try {
-      const res = await fetch('/api/user', {
-        credentials: 'same-origin',
-        cache: 'no-store',
-      })
-      if (res.ok) {
-        const data = await res.json()
-        setUser(data.result)
-      } else {
-        setUser(null)
-      }
-    } catch {
-      setUser(null)
-    }
-  }
 
   const signOut = async () => {
     try {
@@ -75,24 +50,23 @@ export default function Userbar({ ut, authUrl }: Props) {
         credentials: 'same-origin',
       })
       if (res.ok) {
-        //const data = await res.json();
+        userSession.clear();
         router.push("/");
         router.refresh();
-        setUser(null)
       } 
-    } catch (error) {
+    } catch {
     }
   }
 
   useEffect(() => {
-    fetchUser()
+    void userSession.load();
   }, [])
 
   return (
     <Popover>
       <PopoverTrigger className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-muted transition-colors border overflow-hidden">
         {session?.avatarUrl ? (
-          <img src={session.avatarUrl} alt="profile" className="h-full w-full object-cover" />
+          <Image src={session.avatarUrl} alt="profile" width={36} height={36} unoptimized className="h-full w-full object-cover" />
         ) : (
           <User className="h-5 w-5 text-muted-foreground" />
         )}

@@ -7,13 +7,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { Menu, User } from 'lucide-react';
+import { Menu, User, HardDrive } from 'lucide-react';
 
 import Userbar from '@/components/auth/userbar';
 import { ut, type Lang } from '@/lib/global';
 
 const CATEGORIES = [
   { id: "auth", label: 'Account', icon: User, color: "text-purple-500", bg: "bg-purple-50" },
+  { id: "cloud", label: 'Cloud', icon: HardDrive, color: "text-sky-500", bg: "bg-sky-50" },
 ];
 
 interface Props {

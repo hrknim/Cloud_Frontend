@@ -13,6 +13,7 @@ CREATE TABLE "cloud_item" (
   "storageKey" TEXT,
   "starred" BOOLEAN NOT NULL DEFAULT false,
   "deletedAt" TIMESTAMP(3),
+  "trashBatchId" TEXT,
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "updatedAt" TIMESTAMP(3) NOT NULL,
   CONSTRAINT "cloud_item_pkey" PRIMARY KEY ("id"),

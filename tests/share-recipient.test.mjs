@@ -3,7 +3,7 @@ import test from "node:test";
 import { loadShareRecipient } from "./load-cloud.mjs";
 
 test("Recipient lookup uses POST /api/user/handle and trusts only a validated server ID", async () => {
-  const { resolveShareRecipient } = await loadShareRecipient();
+  const { resolveShareRecipient, resolveHandleProfile } = await loadShareRecipient();
   const fetcher = globalThis.fetch; const authUrl = process.env.AUTH_URL;
   process.env.AUTH_URL = "http://localhost:3002";
   const request = new Request("http://localhost:3001/api/shares", { method: "POST", headers: { Cookie: "private_cookie=secret; session_id=test-session; locale=ko" } });
@@ -16,6 +16,11 @@ test("Recipient lookup uses POST /api/user/handle and trusts only a validated se
       return Response.json({ result: { id: "server-user-id", handle: "cloud", displayName: "Cloud", role: "USER", bio: "private", avatarUrl: null } });
     };
     assert.deepEqual(await resolveShareRecipient(request, " @cloud "), { id: "server-user-id", handle: "cloud", displayName: "Cloud" });
+    assert.deepEqual(await resolveHandleProfile(request, "cloud"), { id: "server-user-id", handle: "cloud", displayName: "Cloud", bio: "private", avatarUrl: null });
+    globalThis.fetch = async () => Response.json({ result: { id: "server-user-id", handle: "cloud", displayName: "Cloud", bio: "소개\n두 번째 줄", avatarUrl: "javascript:alert(1)", email: "hidden@example.test", role: "ADMIN" } });
+    assert.deepEqual(await resolveHandleProfile(request, "cloud"), { id: "server-user-id", handle: "cloud", displayName: "Cloud", bio: "소개\n두 번째 줄", avatarUrl: null });
+    globalThis.fetch = async () => Response.json({ result: { id: "server-user-id", handle: "cloud", displayName: "Cloud", avatarUrl: "/avatars/profile.png" } });
+    assert.equal((await resolveHandleProfile(request, "cloud")).avatarUrl, "http://localhost:3002/avatars/profile.png");
     await assert.rejects(() => resolveShareRecipient(request, "@"), error => error.code === "INVALID_HANDLE");
     globalThis.fetch = async () => Response.json({ result: { id: "wrong-user", handle: "other", displayName: "Other" } });
     await assert.rejects(() => resolveShareRecipient(request, "cloud"), error => error.code === "INVALID_AUTH_RESPONSE");

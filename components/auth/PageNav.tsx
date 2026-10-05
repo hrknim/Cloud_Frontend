@@ -1,7 +1,14 @@
 import { Button } from "@/components/ui/button";
 import { ChevronsLeft, ChevronsRight, ChevronRight, ChevronLeft } from "lucide-react";
 
-export default function PageNav({currentPage, totalPages, pages, params = ''}: any) {
+interface PageNavProps {
+  currentPage: number;
+  totalPages: number;
+  pages: number[];
+  params?: string;
+}
+
+export default function PageNav({currentPage, totalPages, pages, params = ''}: PageNavProps) {
   return (
     <div className="flex justify-center items-center gap-1 mt-8">
       {/* 맨 처음 페이지 (<<) */}
@@ -15,7 +22,7 @@ export default function PageNav({currentPage, totalPages, pages, params = ''}: a
       </Button>
 
       {/* 숫자 페이지들 */}
-      {pages.map((p: any) => (
+      {pages.map((p) => (
         <Button
           key={p}
           variant={currentPage === p ? "default" : "outline"}

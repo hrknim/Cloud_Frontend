@@ -95,7 +95,8 @@ test("Cloud API: files, tree operations, validation, and owner isolation", async
     const cycle = await request(`/api/folders/${root.id}`, json("PATCH", { parentId: nested.id }));
     assert.equal(cycle.response.status, 400);
     assert.equal(cycle.body.error.code, "INVALID_PARENT");
-    assert.equal((await request(`/api/folders/${root.id}`, { method: "DELETE" })).response.status, 409);
+    assert.equal((await request(`/api/folders/${root.id}`, { method: "DELETE" })).response.status, 204);
+    assert.equal((await request(`/api/folders/${root.id}`, json("PATCH", { restore: true }))).response.status, 200);
 
     const list = await request(`/api/folders?parentId=${root.id}`);
     assert.equal(list.body.items[0].id, nested.id);
@@ -120,6 +121,30 @@ test("Cloud API: files, tree operations, validation, and owner isolation", async
     assert.equal(content.status, 200);
     assert.equal(await content.text(), payload);
     assert.match(content.headers.get("content-disposition"), /^attachment;/);
+    const partial = await dispatch(file.downloadUrl, { headers: { Range: "bytes=0-4" } });
+    assert.equal(partial.status, 206);
+    assert.equal(partial.headers.get("content-range"), `bytes 0-4/${file.size}`);
+    assert.equal(await partial.text(), "cloud");
+    const invalidRange = await dispatch(file.downloadUrl, { headers: { Range: `bytes=${file.size}-` } });
+    assert.equal(invalidRange.status, 416);
+    assert.equal(invalidRange.headers.get("content-range"), `bytes */${file.size}`);
+    assert.equal((await dispatch(file.downloadUrl, { headers: { Range: "bytes=0-4" } }, "session_id=second-user")).status, 404);
+    for (const [ext, mime] of [["mp4", "video/mp4"], ["mp3", "audio/mpeg"]]) {
+      const mediaForm = new FormData();
+      mediaForm.set("file", new File(["0123456789"], `${prefix}.${ext}`, { type: mime }));
+      const uploadedMedia = await request("/api/files", { method: "POST", body: mediaForm });
+      assert.equal(uploadedMedia.response.status, 201);
+      ids.push(uploadedMedia.body.item.id);
+      const url = uploadedMedia.body.item.downloadUrl;
+      const mediaResponse = await dispatch(`${url}?preview=true`, { headers: { Range: "bytes=2-5" } });
+      assert.equal(mediaResponse.status, 206);
+      assert.equal(mediaResponse.headers.get("content-type"), mime);
+      assert.match(mediaResponse.headers.get("content-disposition"), /^inline;/);
+      assert.equal(await mediaResponse.text(), "2345");
+      const downloadResponse = await dispatch(url);
+      assert.match(downloadResponse.headers.get("content-disposition"), /^attachment;/);
+      await downloadResponse.arrayBuffer();
+    }
     const unsafePreview = await dispatch(`${file.downloadUrl}?preview=true`);
     assert.equal(unsafePreview.headers.get("content-type"), "application/octet-stream");
     assert.match(unsafePreview.headers.get("content-disposition"), /^attachment;/);
@@ -190,11 +215,11 @@ test("Cloud API: files, tree operations, validation, and owner isolation", async
     assert.equal((await request(`/api/files/${file.id}`, json("PATCH", { restore: true }))).response.status, 404);
     assert.equal((await request(`/api/files/${file.id}?permanent=true`, { method: "DELETE" })).response.status, 404);
 
-    // Verify a trash folder containing children cannot be purged, including legacy data.
+    // Inconsistent legacy trash with an active child must not be purged.
     await db.query('UPDATE "cloud_item" SET "deletedAt"=NOW() WHERE "id"=$1', [root.id]);
     const nonemptyPurge = await request(`/api/folders/${root.id}?permanent=true`, { method: "DELETE" });
     assert.equal(nonemptyPurge.response.status, 409);
-    assert.equal(nonemptyPurge.body.error.code, "FOLDER_NOT_EMPTY");
+    assert.equal(nonemptyPurge.body.error.code, "ACTIVE_DESCENDANT");
     assert.equal((await request(`/api/folders/${nested.id}`, { method: "DELETE" })).response.status, 204);
     assert.equal((await request(`/api/folders/${nested.id}?permanent=true`, { method: "DELETE" })).response.status, 204);
     assert.equal((await request(`/api/folders/${root.id}?permanent=true`, { method: "DELETE" })).response.status, 204);
@@ -222,6 +247,7 @@ test("Cloud API: files, tree operations, validation, and owner isolation", async
     const rows = await db.query('SELECT "storageKey" FROM "cloud_item" WHERE "id" = ANY($1::text[]) AND "ownerId" = ANY($2::text[])', [ids, [owner, `${prefix}-other-owner`]]);
     await db.query('UPDATE "cloud_item" SET "parentId"=NULL WHERE "id" = ANY($1::text[]) AND "ownerId" = ANY($2::text[])', [ids, [owner, `${prefix}-other-owner`]]);
     await db.query('DELETE FROM "cloud_item" WHERE "id" = ANY($1::text[]) AND "ownerId" = ANY($2::text[])', [ids, [owner, `${prefix}-other-owner`]]);
+    await db.query('DELETE FROM "cloud_storage" WHERE "userId"=ANY($1::text[])', [[owner, secondOwner]]);
     for (const { storageKey } of rows.rows) {
       if (storageKey && /^[0-9a-f-]{36}$/.test(storageKey)) await unlink(path.join(process.cwd(), ".cloud-storage", storageKey)).catch(error => { if (error.code !== "ENOENT") throw error; });
     }

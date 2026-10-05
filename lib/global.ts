@@ -205,7 +205,7 @@ const PIECES = {
 
 export type PieceKey = keyof typeof PIECES['en'];
 type LangKey = keyof typeof PIECES;
-export function t(key: PieceKey, lang: String = 'en'): string {
+export function t(key: PieceKey, lang: string = 'en'): string {
   return (
     PIECES[lang as LangKey]?.[key] ??
     PIECES.en[key] ??
@@ -225,7 +225,7 @@ export function ut(language: Lang = 'en') {
   }
 }
 
-export function normalizeLang(input?: String) {
+export function normalizeLang(input?: string) {
   return SUPPORTED_LANGS.includes(input as Lang)
     ? (input as Lang)
     : DEFAULT_LANG

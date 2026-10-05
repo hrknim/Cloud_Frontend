@@ -1,4 +1,4 @@
-import { proxyAuthRequest } from "@/lib/auth-proxy";
+import { proxyAuthRequest } from "@/lib/server/auth-proxy";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

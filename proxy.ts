@@ -4,9 +4,9 @@ import type { NextRequest } from 'next/server';
 
 export async function proxy(request: NextRequest) {
   const start = Date.now();
-  const { pathname } = request.nextUrl;
+  const pathname = request.nextUrl.pathname.replace(/^\/s\/[^/]+$/, "/s/[token]").replace(/^\/api\/public\/files\/[^/]+/, "/api/public/files/[token]");
 
-  let response = NextResponse.next();
+  const response = NextResponse.next();
   try {
     const duration = Date.now() - start;
 
@@ -20,7 +20,7 @@ export async function proxy(request: NextRequest) {
       // 요청 정보
       statusCode: response.status,
       method: request.method,
-      path: request.nextUrl.pathname,
+      path: pathname,
       //payload: (request.method == 'POST') ? await request.clone().json() : null,
 
       // 텔레메트리 및 통계 분석

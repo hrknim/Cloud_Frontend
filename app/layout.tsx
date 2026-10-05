@@ -3,9 +3,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/sonner"
 
-import Footer from '@/components/auth/footer';
-import Header from '@/components/auth/header';
-import Layout from '@/components/auth/layout';
 import { GetCurrentLanguage } from '@/lib/global'
 
 import "./globals.css";

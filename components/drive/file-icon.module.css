@@ -1,0 +1,19 @@
+/* Muted hues distinguish formats without overpowering the file name. */
+.tone { color: var(--file-ink); }
+.folder { --file-ink: #967b49; --file-wash: #f5efdf; --file-dark-ink: #cbb78c; --file-dark-wash: #393429; }
+.model { --file-ink: #8271a5; --file-wash: #f0ebf7; --file-dark-ink: #baa9d6; --file-dark-wash: #332e43; }
+.image { --file-ink: #538a82; --file-wash: #e9f3ef; --file-dark-ink: #91bfb4; --file-dark-wash: #253b36; }
+.document { --file-ink: #5e80b2; --file-wash: #eaf0f9; --file-dark-ink: #9bb9df; --file-dark-wash: #29374b; }
+.spreadsheet { --file-ink: #588568; --file-wash: #eaf3ec; --file-dark-ink: #9abfa2; --file-dark-wash: #293c2f; }
+.presentation { --file-ink: #b18453; --file-wash: #faf0e4; --file-dark-ink: #d6b28a; --file-dark-wash: #413428; }
+.video { --file-ink: #a76d81; --file-wash: #f7ebf0; --file-dark-ink: #d2a0b2; --file-dark-wash: #402d36; }
+.audio { --file-ink: #9274ae; --file-wash: #f3ecf8; --file-dark-ink: #c1a6d8; --file-dark-wash: #382e43; }
+.archive { --file-ink: #a18a61; --file-wash: #f5f0e5; --file-dark-ink: #c8b793; --file-dark-wash: #3c3529; }
+.code { --file-ink: #5f8e9b; --file-wash: #eaf3f6; --file-dark-ink: #9bc1cc; --file-dark-wash: #293c43; }
+.design { --file-ink: #ad7b69; --file-wash: #f8eee8; --file-dark-ink: #d5ac99; --file-dark-wash: #41312b; }
+.font { --file-ink: #8a7b9a; --file-wash: #f1edf5; --file-dark-ink: #baadc9; --file-dark-wash: #352f3e; }
+.file { --file-ink: #7c889c; --file-wash: #eef1f6; --file-dark-ink: #aebbd0; --file-dark-wash: #303949; }
+.icon { flex-shrink: 0; }
+.surface.surface { background: var(--file-wash); }
+:global(.dark) .tone { --file-ink: var(--file-dark-ink); --file-wash: var(--file-dark-wash); }
+:global(.dark) .surface.surface { background: var(--file-wash); }

@@ -1,16 +1,17 @@
 "use client";
 
 import { useTheme } from "next-themes"
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { Moon, Sun } from "lucide-react"
+
+const subscribe = () => () => {};
+const clientSnapshot = () => true;
+const serverSnapshot = () => false;
 
 export default function ModeToggle() {
   const { theme, resolvedTheme, setTheme } = useTheme()
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  // Keep the server and initial hydration render identical before showing the theme.
+  const mounted = useSyncExternalStore(subscribe, clientSnapshot, serverSnapshot);
 
   if (!mounted) {
     return (<button className="h-9 w-9 flex items-center justify-center rounded-full" />)

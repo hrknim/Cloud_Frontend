@@ -1,0 +1,4 @@
+.content { flex: 1; min-height: 0; position: relative; }
+.stage { position: absolute; inset: 0; overflow: hidden; touch-action: none; }
+.stage canvas { display: block; max-width: none; }
+.hint { flex-shrink: 0; text-align: center; padding: 8px 12px; color: #bdc1c6; font-size: 12px; }

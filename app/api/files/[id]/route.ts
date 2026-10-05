@@ -1,4 +1,4 @@
-import { cloudResponse, deleteCloudItem, getCloudItem, updateCloudItem } from "@/lib/cloud";
+import { cloudResponse, deleteCloudItem, getCloudItem, updateCloudItem } from "@/lib/server/cloud";
 
 export const runtime = "nodejs";
 type Context = { params: Promise<{ id: string }> };

@@ -1,0 +1,24 @@
+.summary { display: flex; gap: 20px; flex-wrap: wrap; padding: 10px 20px; font-size: 13px; background: #292b30; flex-shrink: 0; }
+.path { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 6px 16px; background: #202124; flex-shrink: 0; }
+.path > span { display: inline-flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%; }
+.path svg { flex-shrink: 0; }
+.path button { border: 0; padding: 6px; border-radius: 4px; background: transparent; color: #a8c7fa; cursor: pointer; min-width: 0; overflow-wrap: anywhere; text-align: left; }
+.path button:hover { background: #ffffff18; }
+.area { position: relative; flex: 1; min-height: 0; overflow: auto; background: #fff; color: #263246; }
+.table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; text-align: left; }
+.table th { position: sticky; top: 0; z-index: 1; background: #eef1f5; font-weight: 500; color: #617086; }
+.table th, .table td { padding: 12px 20px; border-bottom: 1px solid #e1e5eb; }
+.table td:first-child { min-width: 220px; max-width: 600px; overflow-wrap: anywhere; }
+.name { display: flex; align-items: center; gap: 10px; }
+.name svg { flex-shrink: 0; color: #617086; }
+.name button { border: 0; padding: 0; background: transparent; color: #2563eb; font: inherit; cursor: pointer; text-align: left; overflow-wrap: anywhere; }
+.table .numeric { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.status { font-size: 12px; color: #966600; }
+.footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-shrink: 0; padding: 8px 16px; font-size: 12px; color: #bdc1c6; }
+.footer > div { display: flex; align-items: center; gap: 8px; }
+:global(.dark) .area { background: #202124; color: #e8eaed; }
+:global(.dark) .table th { background: #30343c; color: #bdc1c6; }
+:global(.dark) .table th, :global(.dark) .table td { border-color: #3c4043; }
+:global(.dark) .name button { color: #a8c7fa; }
+:global(.dark) .status { color: #fdd663; }
+@media (max-width: 640px) { .table th, .table td { padding: 10px 12px; } .summary { gap: 10px; } .footer { flex-wrap: wrap; } }

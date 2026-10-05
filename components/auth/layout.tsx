@@ -1,6 +1,5 @@
 import type { Lang } from '@/lib/global';
 import { cn } from '@/lib/utils';
-import Footer from '@/components/auth/footer';
 import Header from '@/components/auth/header';
 
 export default function Layout({
@@ -9,15 +8,17 @@ export default function Layout({
   hideSearchbar,
   searchbar,
   mainClassName,
+  className,
 }: Readonly<{
   children: React.ReactNode;
   translate: Lang;
   hideSearchbar: boolean;
   searchbar?: React.ReactNode;
   mainClassName?: string;
+  className?: string;
 }>) {
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className={cn("flex flex-col min-h-screen", className)}>
       <Header translate={translate} hideSearchbar={hideSearchbar} searchbar={searchbar} />
 
       <main className={cn("prose prose-slate flex-1 mx-auto grid gap-8 p-4 w-full", mainClassName)}>

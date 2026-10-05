@@ -1,4 +1,4 @@
-import { cloudResponse, createCloudFolder, listCloudItems } from "@/lib/cloud";
+import { cloudResponse, createCloudFolder, listCloudItems } from "@/lib/server/cloud";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
